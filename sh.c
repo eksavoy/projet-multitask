@@ -10,6 +10,8 @@
 
 #define MAXARGS 10
 
+
+
 // All commands have at least a type. Have looked at the type, the code
 // typically casts the *cmd to some specific cmd type.
 struct cmd {
@@ -34,7 +36,7 @@ struct pipecmd {
   struct cmd *left;  // left side of pipe
   struct cmd *right; // right side of pipe
 };
-
+int execPipeCmd(struct pipecmd* cmd);
 int fork1(void);  // Fork but exits on failure.
 struct cmd *parsecmd(char*);
 
@@ -63,7 +65,6 @@ void runcmd(struct cmd *cmd)
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
-    // Your code here ...
     int fd = open(rcmd->file, rcmd->mode, S_IRWXU);
     dup2(fd, rcmd->fd);
     runcmd(rcmd->cmd);
@@ -72,13 +73,55 @@ void runcmd(struct cmd *cmd)
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
-    fprintf(stderr, "pipe not implemented\n");
+    execPipeCmd(pcmd);
     // Your code here ...
     break;
   }
   exit(0);
 }
 
+int execPipeCmd(struct pipecmd* cmd)
+{
+    int filedes[2];
+
+    if (pipe(filedes) == -1)
+        //errExit("pipe");                     /* Create the pipe */
+
+    switch (fork()) {
+        case -1:
+            //errExit("fork");                 /* Create a child process */
+
+        case 0: /* Child LS exec !*/
+            if (close(filedes[0]) == -1)     /* Close unused write end */
+                //errExit("close");
+
+            dup2(STDOUT_FILENO, filedes[1]);
+            runcmd(cmd->left);
+            
+            if(close(filedes[1]) == -1)
+                //errExit("close");
+            break;
+
+        default: /* Parent */
+            switch (fork()) {
+              case -1:
+                  //errExit("fork");                 /* Create a child process */
+              case 0: //CHild 2 process
+                if(close(filedes[1]) == -1)
+                    //errExit("close");
+                dup2(filedes[0],STDIN_FILENO);
+                runcmd(cmd->right);
+                break;
+
+              default: //Parent
+                break;
+            }
+
+            break;
+    }
+
+    return EXIT_SUCCESS;
+}
 int getcmd(char *buf, int nbuf)
 {
   printf("$ ");
