@@ -63,7 +63,6 @@ char** split_line(char* line){
 int command_lunch(char** args){
 	pid_t pid, wpid;
 	int status;
-
 	pid = fork();
 	if (pid == 0) {
 		// Child process
@@ -82,4 +81,12 @@ int command_lunch(char** args){
 	}
 
 	return 1;
+}
+
+int command_lunch_with_pipe(char** args) {
+
+}
+
+int command_lunch_with_redirection(char** args) {
+
 }
