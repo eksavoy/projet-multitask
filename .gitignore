@@ -27,6 +27,6 @@
 *.i*86
 *.x86_64
 *.hex
-
+shell_custom
 # Debug files
 *.dSYM/
