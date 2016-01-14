@@ -144,11 +144,18 @@ int main(void)
         fprintf(stderr, "cannot cd %s\n", buf+3);
     } else if(buf[0] == 'e' && buf[1] == 'x' && buf[2] == 'i' && buf[3] == 't') {
         return EXIT_SUCCESS;
-    } else {
+    } else if (buf[strlen(buf) - 2] != '&'){
         int pid = fork1();
         if(pid == 0)
             runcmd(parsecmd(buf));
         wait(&pid);
+    } else {
+          buf[strlen(buf) - 2] = 0;
+          int pid = fork1();
+          if(pid == 0) {
+            setpgrp();
+            runcmd(parsecmd(buf));
+          }
     }
   }
 
