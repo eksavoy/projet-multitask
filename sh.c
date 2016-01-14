@@ -97,7 +97,7 @@ int execPipeCmd(struct pipecmd* cmd)
 
             dup2(STDOUT_FILENO, filedes[1]);
             runcmd(cmd->left);
-            
+
             if(close(filedes[1]) == -1)
                 //errExit("close");
             break;
@@ -141,6 +141,8 @@ int main(void)
       buf[strlen(buf)-1] = 0;  // chop \n
       if(chdir(buf+3) < 0)
         fprintf(stderr, "cannot cd %s\n", buf+3);
+    } else if(buf[0] == 'e' && buf[1] == 'x' && buf[2] == 'i' && buf[3] == 't') {
+        return EXIT_SUCCESS;
     } else {
         int pid = fork1();
         if(pid == 0)
