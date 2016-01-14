@@ -7,10 +7,21 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <errno.h>
+#include <stdarg.h>
 
 #define MAXARGS 10
 
+void errExit(const char *format, ...)
+{
+    va_list argList;
+    va_start(argList, format);
+    vfprintf(stderr, format, argList);
+    fprintf(stderr, " [ %s ] \n", strerror(errno));
+    va_end(argList);
 
+    exit(EXIT_FAILURE);
+}
 
 // All commands have at least a type. Have looked at the type, the code
 // typically casts the *cmd to some specific cmd type.
@@ -85,38 +96,29 @@ int execPipeCmd(struct pipecmd* cmd)
     int filedes[2];
 
     if (pipe(filedes) == -1)
-        //errExit("pipe");                     /* Create the pipe */
+        errExit("pipe");                     /* Create the pipe */
 
     switch (fork()) {
         case -1:
-            //errExit("fork");                 /* Create a child process */
+            errExit("fork");                 /* Create a child process */
 
         case 0: /* Child LS exec !*/
             if (close(filedes[0]) == -1)     /* Close unused write end */
-                //errExit("close");
+                errExit("close");
 
             dup2(STDOUT_FILENO, filedes[1]);
             runcmd(cmd->left);
 
             if(close(filedes[1]) == -1)
-                //errExit("close");
+                errExit("close");
             break;
 
         default: /* Parent */
-            switch (fork()) {
-              case -1:
-                  //errExit("fork");                 /* Create a child process */
-              case 0: //CHild 2 process
-                if(close(filedes[1]) == -1)
-                    //errExit("close");
-                dup2(filedes[0],STDIN_FILENO);
-                runcmd(cmd->right);
-                break;
 
-              default: //Parent
-                break;
-            }
-
+            if(close(filedes[1]) == -1)
+              errExit("close");
+            dup2(filedes[0],STDIN_FILENO);
+            runcmd(cmd->right);
             break;
     }
 
