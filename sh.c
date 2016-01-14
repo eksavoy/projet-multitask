@@ -106,7 +106,7 @@ int execPipeCmd(struct pipecmd* cmd)
             if (close(filedes[0]) == -1)     /* Close unused write end */
                 errExit("close");
 
-            dup2(STDOUT_FILENO, filedes[1]);
+            dup2(filedes[1], STDOUT_FILENO);
             runcmd(cmd->left);
 
             if(close(filedes[1]) == -1)
@@ -121,7 +121,6 @@ int execPipeCmd(struct pipecmd* cmd)
             runcmd(cmd->right);
             break;
     }
-
     return EXIT_SUCCESS;
 }
 int getcmd(char *buf, int nbuf)
