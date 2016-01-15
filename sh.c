@@ -57,7 +57,7 @@ bool isPidStore(pid_t* pidList, int size, pid_t pid);
 void foregroundHandler(int signum);
 struct cmd *parsecmd(char*);
 pid_t* listPid;
-pid_t procForeground;
+pid_t procForeground = -1;
 int sizePidList = 0;
 // Execute cmd.  Never returns.
 void runcmd(struct cmd *cmd)
@@ -183,8 +183,14 @@ void backgroundHandler(int siganl) {
   }
 }
 void foregroundHandler(int signum) {
- if(signum == SIGINT || signum == SIGQUIT)
-  kill(procForeground, SIGINT);
+ if(procForeground != -1){
+  if(signum == SIGINT ){
+    kill(procForeground, SIGINT);    
+   }else if(signum == SIGQUIT){
+    kill(procForeground, SIGQUIT);
+   }
+   procForeground = -1;
+ }
 }
 void killAllHandler(int signum) {
   if(signum == SIGHUP) {
