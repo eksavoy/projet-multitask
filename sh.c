@@ -52,7 +52,7 @@ struct pipecmd {
 int execPipeCmd(struct pipecmd* cmd);
 int fork1(void);  // Fork but exits on failure.
 bool isBackProc(char* buff);
-void addBackProc(pid_t* pidList,int size, pid_t pid);
+void addBackProc(pid_t* pidList,pid_t pid);
 bool isPidStore(pid_t* pidList, int size, pid_t pid);
 void foregroundHandler(int signum);
 struct cmd *parsecmd(char*);
@@ -148,9 +148,10 @@ bool isBackProc(char* buf){
   return false;
 }
 
-void addBackProc(pid_t* pidList,int size, pid_t pid){
-  listPid = realloc(pidList, (size+1)*sizeof(pid_t));
-  listPid[size++] = pid;
+void addBackProc(pid_t* pidList,pid_t pid){
+  listPid = realloc(pidList, (sizePidList+1)*sizeof(pid_t));
+  listPid[sizePidList] = pid;
+  sizePidList++;
 }
 
 bool isPidStore(pid_t* pidList, int size, pid_t pid){
@@ -167,22 +168,36 @@ bool isPidStore(pid_t* pidList, int size, pid_t pid){
 
 void backgroundHandler(int siganl) {
   pid_t pid;
-  while ( (pid = waitpid(-1, NULL, WNOHANG)) > 0) {
-    if(isPidStore(listPid,sizePidList,pid)) {
-      printf("A background process has terminated: %ld\n\n", (long)pid);
+  if(siganl == SIGHUP) {
+      for(int i=0; i<sizePidList; i++) {
+        kill(listPid[i], SIGHUP);
+      }
+  } else {
+    while ( (pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+      if(isPidStore(listPid,sizePidList,pid)) {
+        printf("A background process has terminated: %ld\n\n", (long)pid);
+      }
+      continue;
     }
-    continue;
   }
 }
 void foregroundHandler(int signum) {
- if(signum == SIGINT) 
+ if(signum == SIGINT)
   kill(procForeground, SIGINT);
+}
+void killAllHandler(int signum) {
+  if(signum == SIGHUP) {
+    backgroundHandler(SIGHUP);
+    foregroundHandler(SIGINT);
+    kill(getpid(), SIGHUP);
+  }
 }
 
 int main(void)
 {
   signal(SIGCHLD, backgroundHandler);
   signal(SIGINT, foregroundHandler);
+  signal(SIGHUP, killAllHandler);
   // Read and run input commands.
   char buf[100];
   while(getcmd(buf, sizeof(buf)) >= 0){
@@ -195,13 +210,23 @@ int main(void)
     }else if (isBackProc(buf)){
       buf[strlen(buf) - 2] = 0;
       int pid = fork1();
-      addBackProc(listPid, sizePidList, pid);
+      printf("Pid : %d\n", pid);
+      if(pid == 0) {
+        printf("Size avant: %d\n", sizePidList );
+        addBackProc(listPid, getpid());
+      } else {
+        addBackProc(listPid,pid);
+      }
+      printf("Size après: %d\n", sizePidList );
+      for(int j=0; j< sizePidList;j++) {
+        printf("ID : %d - process : %l", j, (long)listPid[j]);
+      }
       if(pid == 0){
         setpgrp();
         runcmd(parsecmd(buf));
       }
     } else {
-        buf[strlen(buf) - 1] = 0;
+        //buf[strlen(buf) - 1] = 0;
         int pid = fork1();
         if(pid == 0){
           runcmd(parsecmd(buf));
