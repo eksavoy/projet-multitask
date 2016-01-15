@@ -7,8 +7,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <signal.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #define MAXARGS 10
 
@@ -49,8 +51,14 @@ struct pipecmd {
 };
 int execPipeCmd(struct pipecmd* cmd);
 int fork1(void);  // Fork but exits on failure.
+bool isBackProc(char* buff);
+void addBackProc(pid_t* pidList,int size, pid_t pid);
+bool isPidStore(pid_t* pidList, int size, pid_t pid);
+void foregroundHandler(int signum);
 struct cmd *parsecmd(char*);
-
+pid_t* listPid;
+pid_t procForeground;
+int sizePidList = 0;
 // Execute cmd.  Never returns.
 void runcmd(struct cmd *cmd)
 {
@@ -133,8 +141,48 @@ int getcmd(char *buf, int nbuf)
   return 0;
 }
 
+bool isBackProc(char* buf){
+  if (buf[strlen(buf) - 2] == '&'){
+    return true;
+  }
+  return false;
+}
+
+void addBackProc(pid_t* pidList,int size, pid_t pid){
+  listPid = realloc(pidList, (size+1)*sizeof(pid_t));
+  listPid[size++] = pid;
+}
+
+bool isPidStore(pid_t* pidList, int size, pid_t pid){
+  if (size == 0)
+    return false;
+  int i = 0;
+  for(i; i < size; ++i)
+  {
+    if(pidList[i] == pid)
+      return true;
+  }
+  return false;
+}
+
+void backgroundHandler(int siganl) {
+  pid_t pid;
+  while ( (pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+    if(isPidStore(listPid,sizePidList,pid)) {
+      printf("A background process has terminated: %ld\n\n", (long)pid);
+    }
+    continue;
+  }
+}
+void foregroundHandler(int signum) {
+ if(signum == SIGINT) 
+  kill(procForeground, SIGINT);
+}
+
 int main(void)
 {
+  signal(SIGCHLD, backgroundHandler);
+  signal(SIGINT, foregroundHandler);
   // Read and run input commands.
   char buf[100];
   while(getcmd(buf, sizeof(buf)) >= 0){
@@ -143,19 +191,23 @@ int main(void)
       if(chdir(buf+3) < 0)
         fprintf(stderr, "cannot cd %s\n", buf+3);
     } else if(buf[0] == 'e' && buf[1] == 'x' && buf[2] == 'i' && buf[3] == 't') {
-        return EXIT_SUCCESS;
-    } else if (buf[strlen(buf) - 2] != '&'){
-        int pid = fork1();
-        if(pid == 0)
-            runcmd(parsecmd(buf));
-        wait(&pid);
+      return EXIT_SUCCESS;
+    }else if (isBackProc(buf)){
+      buf[strlen(buf) - 2] = 0;
+      int pid = fork1();
+      addBackProc(listPid, sizePidList, pid);
+      if(pid == 0){
+        setpgrp();
+        runcmd(parsecmd(buf));
+      }
     } else {
-          buf[strlen(buf) - 2] = 0;
-          int pid = fork1();
-          if(pid == 0) {
-            setpgrp();
-            runcmd(parsecmd(buf));
-          }
+        buf[strlen(buf) - 1] = 0;
+        int pid = fork1();
+        if(pid == 0){
+          runcmd(parsecmd(buf));
+        }
+        procForeground = pid;
+        wait(&pid);
     }
   }
 
