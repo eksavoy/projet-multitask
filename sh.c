@@ -169,7 +169,8 @@ bool isPidStore(pid_t* pidList, int size, pid_t pid){
 void backgroundHandler(int siganl) {
   pid_t pid;
   if(siganl == SIGHUP) {
-      for(int i=0; i<sizePidList; i++) {
+      int i = 0;
+      for(i; i<sizePidList; i++) {
         kill(listPid[i], SIGHUP);
       }
   } else {
@@ -210,16 +211,10 @@ int main(void)
     }else if (isBackProc(buf)){
       buf[strlen(buf) - 2] = 0;
       int pid = fork1();
-      printf("Pid : %d\n", pid);
       if(pid == 0) {
-        printf("Size avant: %d\n", sizePidList );
         addBackProc(listPid, getpid());
       } else {
         addBackProc(listPid,pid);
-      }
-      printf("Size après: %d\n", sizePidList );
-      for(int j=0; j< sizePidList;j++) {
-        printf("ID : %d - process : %l", j, (long)listPid[j]);
       }
       if(pid == 0){
         setpgrp();
