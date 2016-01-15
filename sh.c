@@ -183,7 +183,7 @@ void backgroundHandler(int siganl) {
   }
 }
 void foregroundHandler(int signum) {
- if(signum == SIGINT)
+ if(signum == SIGINT || signum == SIGQUIT)
   kill(procForeground, SIGINT);
 }
 void killAllHandler(int signum) {
@@ -194,11 +194,14 @@ void killAllHandler(int signum) {
   }
 }
 
+
+
 int main(void)
 {
   signal(SIGCHLD, backgroundHandler);
   signal(SIGINT, foregroundHandler);
   signal(SIGHUP, killAllHandler);
+  signal(SIGQUIT, foregroundHandler);
   // Read and run input commands.
   char buf[100];
   while(getcmd(buf, sizeof(buf)) >= 0){
