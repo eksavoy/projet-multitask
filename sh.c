@@ -173,19 +173,19 @@ void backgroundHandler(int siganl) {
       for(i; i<sizePidList; i++) {
         kill(listPid[i], SIGHUP);
       }
-  } else {
+  } /*else {
     while ( (pid = waitpid(-1, NULL, WNOHANG)) > 0) {
       if(isPidStore(listPid,sizePidList,pid)) {
         printf("A background process has terminated: %ld\n\n", (long)pid);
       }
       continue;
     }
-  }
+  }*/
 }
 void foregroundHandler(int signum) {
  if(procForeground != -1){
   if(signum == SIGINT ){
-    kill(procForeground, SIGINT);    
+    kill(procForeground, SIGINT);
    }else if(signum == SIGQUIT){
     kill(procForeground, SIGQUIT);
    }
@@ -197,7 +197,9 @@ void killAllHandler(int signum) {
     backgroundHandler(SIGHUP);
     foregroundHandler(SIGINT);
     kill(getpid(), SIGHUP);
+    exit(EXIT_SUCCESS);
   }
+
 }
 
 
