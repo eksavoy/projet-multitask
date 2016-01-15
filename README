@@ -1,0 +1,15 @@
+Projet shell
+
+Auteurs :
+Cassar Thomas
+Delpierre Mathieu
+De-coster Romain
+
+Compiler le programme : (clean automatique des .o)
+make
+
+Nettoyer le dossier :
+make cleaner
+
+Lancer le shell :
+./shell_custom
